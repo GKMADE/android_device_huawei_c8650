@@ -1,0 +1,5 @@
+# Copyright (c) 2010, Code Aurora Forum. All rights reserved.
+#
+
+dev_mount sdcard2 /mnt/sdcard auto /devices/platform/goldfish_mmc.0 /devices/platform/msm_sdcc.1/mmc_host/mmc0
+
