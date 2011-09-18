@@ -30,6 +30,7 @@ PRODUCT_PACKAGES += \
     libOmxCore \
     libOmxVidEnc \
     dexpreopt \
+    Stk \
 #    FM \
 
 
@@ -45,9 +46,12 @@ PRODUCT_COPY_FILES += \
 
 PRODUCT_COPY_FILES += \
     device/huawei/c8650/wpa_supplicant.conf:system/etc/wifi/wpa_supplicant.conf \
+
 # Init
 PRODUCT_COPY_FILES += \
     device/huawei/c8650/init.huawei.rc:root/init.huawei.rc \
+    device/huawei/c8650/init.rc:root/init.rc \
+    device/huawei/c8650/init:root/init \
     device/huawei/c8650/ueventd.rc:root/ueventd.rc
 
 # Audio

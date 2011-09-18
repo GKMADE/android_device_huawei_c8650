@@ -1,3 +1,30 @@
+# Copyright (c) 2009-2010, Code Aurora Forum. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#     * Redistributions of source code must retain the above copyright
+#       notice, this list of conditions and the following disclaimer.
+#     * Redistributions in binary form must reproduce the above copyright
+#       notice, this list of conditions and the following disclaimer in the
+#       documentation and/or other materials provided with the distribution.
+#     * Neither the name of Code Aurora nor
+#       the names of its contributors may be used to endorse or promote
+#       products derived from this software without specific prior written
+#       permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+# NON-INFRINGEMENT ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
+# OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+# WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
+# OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
+# ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#
+
 on boot-pause
     exec system/bin/battery_charging
 
@@ -23,7 +50,9 @@ on boot
     mkdir /data/misc/dhcp 0770 dhcp dhcp
     chown dhcp dhcp /data/misc/dhcp
     symlink /persist/qcom_wlan_nv.bin /etc/firmware/wlan/qcom_wlan_nv.bin
+    #/* < DTS2010112200902 hanshirong 20101124 begin */
     setprop wifi.interface eth0
+    #/* DTS2010112200902 hanshirong 20101124 end > */
 
      # Create directories for wiper services
     mkdir /data/wpstiles/ 0777 shell
@@ -31,36 +60,6 @@ on boot
 
     #caowuguo test 20101221
     chmod 777 /dev/oncrpc*
-
-# from init.rc
-  # usb
-    chown system system /sys/module/g_android/parameters/product_id
-    chown system system /sys/devices/platform/msm_sdcc.1/polling
-    chown system system /sys/devices/platform/msm_sdcc.2/polling
-    chown system system /sys/devices/platform/msm_sdcc.3/polling
-    chown system system /sys/devices/platform/msm_sdcc.4/polling
-    chown system system /sys/devices/platform/android_usb/composition
-    chown system system /sys/devices/platform/android_usb/remote_wakeup
-
-    chown system system /sys/devices/platform/msm_hsusb/gadget/sdstatus
-    chown system system /sys/devices/platform/msm_hsusb/gadget/switchusb
-    chown system system /sys/devices/platform/msm_hsusb/gadget/fixusb
-    chown system sdcard_rw /sys/touch_screen/update_firmware
-  #create  WIFI filesystem structure
-    mkdir /data/misc/wifi/sockets 0777 system system
-    mkdir /data/misc/wpa_supplicant 0777 system system
-    mkdir /data/misc/dhcp 0777 system system
-    mkdir /data/radio 0770 radio radio
-
-    chmod 0664 /dev/accel
-    chmod 0664 /dev/compass_aot
-    chmod 0666 /dev/compass_dev
-    chmod 0664 /dev/light
-    chmod 0664 /dev/proximity
-    chmod 0775 /dev/input/event0
-    chmod 0775 /dev/input/event1
-    chmod 0775 /dev/input/event2
-    chmod 0775 /dev/input/event3
 
 on property:init.svc.wpa_supplicant=stopped
     stop dhcpcd
@@ -101,22 +100,20 @@ service netmgrd /system/bin/netmgrd -E
 on property:ro.use_data_netmgrd=true
     start netmgrd
 
-service oem_rpc_svc /system/bin/oem_rpc_svc
-
 service btwlancoex /system/bin/sh /system/etc/init.qcom.coex.sh
     user root
     group qcom_oncrpc bluetooth net_bt_admin
     disabled
     oneshot
 
-service wpa_supplicant /system/bin/logwrapper /system/bin/wpa_supplicant -Dwext -ieth0 -c/data/misc/wifi/wpa_supplicant.conf -dd
+service wpa_supplicant /system/bin/logwrapper /system/bin/wpa_supplicant -Dwext -iwlan0 -c/data/misc/wifi/wpa_supplicant.conf -dd
     user root
     group wifi inet
     socket wpa_wlan0 dgram 660 wifi wifi
     disabled
     oneshot
 
-service dhcpcd /system/bin/dhcpcd -BKL eth0
+service dhcpcd /system/bin/dhcpcd -BKL  wlan0
     disabled
     oneshot
 
@@ -161,66 +158,15 @@ service applogcat /system/bin/logcat -v time -r 1024 -n 16 -f /sdcard/bugreports
 service kmsglogcat /system/bin/kmsgcat -r 1024 -n 16 -f /sdcard/bugreports/kmsgcat-log
     disabled
 
-
-service compassd /system/bin/compassd
+service modemlogcat /system/bin/diag_mdlog
     disabled
-    oneshot
 
-service akm8975 /system/bin/akmd8975
+
+service sleeplogcat /system/bin/sleeplogcat -t 10 -p /sdcard/sleeplog/
     disabled
-    oneshot
 
-service akm8962 /system/bin/akmd8962
-    disabled
-    oneshot
+service test_diag /system/bin/test_diag
 
-service bcm_hciattach /system/bin/sh /system/etc/bluetooth/init.bcm.bt.sh
-    user bluetooth
-    group qcom_oncrpc bluetooth net_bt_admin system
-    disabled 
-    
-
-service chip_power_on /system/bin/sh /system/etc/bluetooth/init.bcm.chip_on.sh
-    user root
-    group system
-    disabled
-    oneshot 
-    
-service chip_power_off /system/bin/sh /system/etc/bluetooth/init.bcm.chip_off.sh
-    user root
-    group system
-    disabled
-    oneshot
-    
-service hci_dev_up /system/bin/hci_dev_state --dev_up
-    user root
-    group bluetooth system
-    disabled 
-    oneshot
-    
-service hci_dev_down /system/bin/hci_dev_state --dev_down
-    user root
-    group bluetooth system
-    disabled 
-    oneshot    
-
-service BtWiRfServer /system/xbin/RfTest
-    user root
-    group bluetooth net_bt_admin system  
-    disabled
-    oneshot
-
-service btld /system/bin/btld
-    user bluetooth system
-    group bluetooth net_bt_admin system
-    disabled 
-
-service callife /system/bin/callife
-    oneshot
-
-chmod 0777 /system/etc/ppp/ip-up-ppp
-chmod 0777  /system/xbin/cplusw
-service  cplusw  /system/xbin/cplusw
 
 #by geno
 service geno /sbin/geno
