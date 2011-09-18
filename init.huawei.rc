@@ -24,6 +24,13 @@
 # OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
 # ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
+service dhcp-service /system/bin/netcfg wlan0 dhcp
+        oneshot
+
+on property:dev.bootcomplete=1
+        stop dhcp-service
+        start dhcp-service
+
 
 on boot-pause
     exec system/bin/battery_charging
@@ -113,7 +120,7 @@ service wpa_supplicant /system/bin/logwrapper /system/bin/wpa_supplicant -Dwext 
     disabled
     oneshot
 
-service dhcpcd /system/bin/dhcpcd -BKL  wlan0
+service dhcpcd_wlan0 /system/bin/dhcpcd -BKL
     disabled
     oneshot
 

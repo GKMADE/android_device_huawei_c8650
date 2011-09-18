@@ -30,9 +30,6 @@ PRODUCT_PACKAGES += \
     libOmxCore \
     libOmxVidEnc \
     dexpreopt \
-    Stk \
-#    FM \
-
 
 DISABLE_DEXPREOPT := false
 
@@ -133,3 +130,5 @@ PRODUCT_PROPERTY_OVERRIDES += \
 
 # addon
 $(call inherit-product-if-exists, addon/addon.mk)
+# wifi
+$(call inherit-product-if-exists, device/huawei/c8650/wifi/wifi.mk)

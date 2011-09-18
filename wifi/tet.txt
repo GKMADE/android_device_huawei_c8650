@@ -1,0 +1,9 @@
+bcm_loadecho.sh
+bcm_loadipf.sh
+connectap.sh
+iwconfig
+iwlist
+iwpriv
+nvram.txt
+udp_server
+wifi.mk
