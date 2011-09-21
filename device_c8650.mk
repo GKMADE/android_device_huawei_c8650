@@ -37,6 +37,10 @@ DISABLE_DEXPREOPT := false
 PRODUCT_COPY_FILES += \
     device/huawei/c8650/vold.fstab:system/etc/vold.fstab
 
+# bluetooth
+PRODUCT_COPY_FILES += \
+    device/huawei/c8650/init.qcom.bt.sh:system/etc/init.qcom.bt.sh
+
 # apns-conf.xml
 PRODUCT_COPY_FILES += \
     device/huawei/c8650/apns-conf.xml:system/etc/apns-conf.xml
@@ -60,7 +64,7 @@ PRODUCT_COPY_FILES += \
 PRODUCT_COPY_FILES += \
     device/huawei/c8650/media_profiles.xml:system/etc/media_profiles.xml
 
-#Media profile
+# Wifi firmware
 PRODUCT_COPY_FILES += \
     device/huawei/c8650/prebuild/wifi/dhd.ko:system/wifi/dhd.ko \
     device/huawei/c8650/prebuild/wifi/firmware.bin:system/wifi/firmware.bin \
