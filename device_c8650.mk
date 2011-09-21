@@ -30,6 +30,7 @@ PRODUCT_PACKAGES += \
     libOmxCore \
     libOmxVidEnc \
     dexpreopt \
+    gps.c8650 \
 
 DISABLE_DEXPREOPT := false
 
