@@ -37,7 +37,7 @@
 
 #define LOG_SND_RPC 0  // Set to 1 to log sound RPC's
 
-#undef COMBO_DEVICE_SUPPORTED // Headset speaker combo device not supported on this target
+#define COMBO_DEVICE_SUPPORTED 0 // Headset speaker combo device not supported on this target
 #define DUALMIC_KEY "dualmic_enabled"
 #define TTY_MODE_KEY "tty_mode"
 
@@ -50,7 +50,6 @@ const uint32_t AudioHardware::inputSamplingRates[] = {
 
 static int get_audpp_filter(void);
 static int msm72xx_enable_postproc(bool state);
-static int msm72xx_enable_preproc(bool state);
 
 // Post processing paramters
 static struct rx_iir_filter iir_cfg[3];
@@ -74,7 +73,7 @@ static bool playback_in_progress = false;
 static struct tx_iir tx_iir_cfg[9];
 static struct ns ns_cfg[9];
 static struct tx_agc tx_agc_cfg[9];
-static int enable_preproc_mask = 0;
+static int enable_preproc_mask;
 
 static int snd_device = -1;
 
@@ -104,7 +103,7 @@ static uint32_t SND_DEVICE_NO_MIC_HEADSET=-1;
 
 AudioHardware::AudioHardware() :
     mInit(false), mMicMute(true), mBluetoothNrec(true), mBluetoothId(0),
-    mOutput(0), mSndEndpoints(NULL), mCurSndDevice(-1), mDualMicEnabled(false)
+    mOutput(0), mSndEndpoints(NULL), mCurSndDevice(-1), mDualMicEnabled(false), mBuiltinMicSelected(false)
 {
    if (get_audpp_filter() == 0) {
            audpp_filter_inited = true;
@@ -258,17 +257,6 @@ AudioStreamIn* AudioHardware::openInputStream(
         return 0;
     }
 
-    if ( (mMode == AudioSystem::MODE_IN_CALL) &&
-         (getInputSampleRate(*sampleRate) > AUDIO_HW_IN_SAMPLERATE) &&
-         (*format == AUDIO_HW_IN_FORMAT) )
-    {
-        LOGE("PCM recording, in a voice call, with sample rate more than 8K not supported \
-                re-configure with 8K and try software re-sampler ");
-        *status = BAD_VALUE;
-        *sampleRate = AUDIO_HW_IN_SAMPLERATE;
-        return 0;
-    }
-
     mLock.lock();
 
     AudioStreamInMSM72xx* in = new AudioStreamInMSM72xx();
@@ -408,11 +396,10 @@ status_t AudioHardware::setParameters(const String8& keyValuePairs)
         } else {
             mTtyMode = TTY_OFF;
         }
-        if(mMode != AudioSystem::MODE_IN_CALL){
-           return NO_ERROR;
-        }
-        doRouting(NULL);
+    } else {
+	mTtyMode = TTY_OFF;
     }
+    doRouting(NULL);
 
     return NO_ERROR;
 }
@@ -429,12 +416,6 @@ String8 AudioHardware::getParameters(const String8& keys)
         param.add(key, value);
     }
 
-    key = String8("tunneled-input-formats");
-    if ( param.get(key,value) == NO_ERROR ) {
-        param.addInt(String8("AMR"), true );
-        param.addInt(String8("QCELP"), true );
-        param.addInt(String8("EVRC"), true );
-    }
     LOGV("AudioHardware::getParameters() %s", param.toString().string());
     return param.toString();
 }
@@ -1141,8 +1122,6 @@ status_t AudioHardware::setMasterVolume(float v)
     set_volume_rpc(SND_DEVICE_HEADSET, SND_METHOD_VOICE, vol, m7xsnddriverfd);
     set_volume_rpc(SND_DEVICE_IN_S_SADC_OUT_HANDSET, SND_METHOD_VOICE, vol, m7xsnddriverfd);
     set_volume_rpc(SND_DEVICE_IN_S_SADC_OUT_SPEAKER_PHONE, SND_METHOD_VOICE, vol, m7xsnddriverfd);
-    set_volume_rpc(SND_DEVICE_TTY_HEADSET, SND_METHOD_VOICE, 1, m7xsnddriverfd);
-    set_volume_rpc(SND_DEVICE_TTY_VCO, SND_METHOD_VOICE, 1, m7xsnddriverfd);
     // We return an error code here to let the audioflinger do in-software
     // volume on top of the maximum volume that we set through the SND API.
     // return error - software mixer will handle it
@@ -1206,9 +1185,22 @@ status_t AudioHardware::doAudioRouteOrMute(uint32_t device)
         }
     }
 #endif
-    LOGV("doAudioRouteOrMute() device %x, mMode %d, mMicMute %d", device, mMode, mMicMute);
-    return do_route_audio_rpc(device,
-                              mMode != AudioSystem::MODE_IN_CALL, mMicMute, m7xsnddriverfd);
+    /* QCOM caveat: Audio will be routed to speaker if device=handset and mute=true */
+    /* Also, the audio circuit causes battery drain unless mute=true */
+    /* Android < 2.0 uses MODE_IN_CALL for routing audio to earpiece */
+    /* Android >= 2.0 advises to use STREAM_VOICE_CALL streams and setSpeakerphoneOn() */
+    /* Android >= 2.3 uses MODE_IN_COMMUNICATION for SIP calls */
+    bool mute = !isInCall();
+    if(mute && (device == SND_DEVICE_HANDSET)) {
+        /* workaround to emulate Android >= 2.0 behaviour */
+        /* enable routing to earpiece (unmute) if mic is selected as input */
+        mute = !mBuiltinMicSelected;
+    }
+
+    LOGD("doAudioRouteOrMute() device %x, mMode %d, mMicMute %d, mBuiltinMicSelected %d, %s",
+        device, mMode, mMicMute, mBuiltinMicSelected, mute ? "muted" : "audio circuit active");
+    return do_route_audio_rpc(device, mute, mMicMute, m7xsnddriverfd);
+
 }
 
 status_t AudioHardware::doRouting(AudioStreamInMSM72xx *input)
@@ -1227,6 +1219,7 @@ status_t AudioHardware::doRouting(AudioStreamInMSM72xx *input)
     if (input != NULL) {
         uint32_t inputDevice = input->devices();
         LOGI("do input routing device %x\n", inputDevice);
+        mBuiltinMicSelected = (inputDevice == AudioSystem::DEVICE_IN_BUILTIN_MIC);
         // ignore routing device information when we start a recording in voice
         // call
         // Recording will happen through currently active tx device
@@ -1596,6 +1589,7 @@ status_t AudioHardware::AudioStreamOutMSM72xx::setParameters(const String8& keyV
     if (param.getInt(key, device) == NO_ERROR) {
         mDevices = device;
         LOGV("set output routing %x", mDevices);
+	status = mHardware->setParameters(keyValuePairs);
         status = mHardware->doRouting(NULL);
         param.remove(key);
     }
@@ -1867,29 +1861,14 @@ status_t AudioHardware::AudioStreamInMSM72xx::set(
     //if (!acoustic)
     //    return NO_ERROR;
 
-    audpre_index = calculate_audpre_table_index(mSampleRate);
-    if(audpre_index < 0) {
-        LOGE("wrong sampling rate");
-        status = -EINVAL;
-        goto Error;
-    }
-    return NO_ERROR;
-
-Error:
-    if (mFd >= 0) {
-        ::close(mFd);
-        mFd = -1;
-    }
-    return status;
-}
-
-static int msm72xx_enable_preproc(bool state)
-{
-    uint16_t mask = 0x0000;
-
     if (audpp_filter_inited)
     {
         int fd;
+        audpre_index = calculate_audpre_table_index(mSampleRate);
+        if(audpre_index < 0) {
+             LOGE("wrong sampling rate");
+             goto Error;
+        }
 
         fd = open(PREPROC_CTL_DEVICE, O_RDWR);
         if (fd < 0) {
@@ -1944,22 +1923,22 @@ static int msm72xx_enable_preproc(bool state)
                LOGE("set TX IIR filter error.");
             }
         }
-
-        if (state == true) {
-            /*Setting AUDPRE_ENABLE*/
-            if (ioctl(fd, AUDIO_ENABLE_AUDPRE, &enable_preproc_mask) < 0) {
-                LOGE("set AUDPRE_ENABLE error.");
-            }
-        } else {
-            /*Setting AUDPRE_ENABLE*/
-            if (ioctl(fd, AUDIO_ENABLE_AUDPRE, &mask) < 0) {
-                LOGE("set AUDPRE_ENABLE error.");
-            }
+        /*Setting AUDPRE_ENABLE*/
+        if (ioctl(fd, AUDIO_ENABLE_AUDPRE, &enable_preproc_mask) < 0)
+        {
+           LOGE("set AUDPRE_ENABLE error.");
         }
         close(fd);
     }
 
     return NO_ERROR;
+
+Error:
+    if (mFd >= 0) {
+        ::close(mFd);
+        mFd = -1;
+    }
+    return status;
 }
 
 AudioHardware::AudioStreamInMSM72xx::~AudioStreamInMSM72xx()
@@ -2001,7 +1980,6 @@ ssize_t AudioHardware::AudioStreamInMSM72xx::read( void* buffer, ssize_t bytes)
             standby();
             return -1;
         }
-        msm72xx_enable_preproc(true);
     }
 
     // Resetting the bytes value, to return the appropriate read value
@@ -2063,7 +2041,6 @@ ssize_t AudioHardware::AudioStreamInMSM72xx::read( void* buffer, ssize_t bytes)
 status_t AudioHardware::AudioStreamInMSM72xx::standby()
 {
     if (mState > AUDIO_INPUT_CLOSED) {
-        msm72xx_enable_preproc(false);
         if (mFd >= 0) {
             ::close(mFd);
             mFd = -1;
