@@ -119,6 +119,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.opengles.version=131072
     ro.config.hw_proximity=true
     dalvik.vm.heapsize=32m
+    ril.subscription.types=RUIM,NV
     ro.config.hw_opta=92
     ro.config.hw_optb=156
     persist.sys.language=zh \
