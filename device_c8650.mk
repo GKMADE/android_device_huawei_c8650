@@ -100,9 +100,7 @@ PRODUCT_PROPERTY_OVERRIDES := \
 
 PRODUCT_PROPERTY_OVERRIDES += \
     ro.config.hwft_simrefresh=true \
-    ro.config.do_sdcard_upgrade=true \
     ro.config.keyguardPlmnLocaled=true \
-    ro.config.hw_CplusW=true \
     ro.config.hw_virtualsdcard=true \
     ro.config.srs.equalizer=true \
     ro.config.srs.default.type=1 \
@@ -116,7 +114,7 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.config.hw_GSensorOptimize=true \
     ro.opengles.version=131072 \
     ro.config.hw_proximity=true \
-    dalvik.vm.heapsize=32m \ 
+    dalvik.vm.heapsize=32m \
     ro.config.hw_opta=92 \
     ro.config.hw_optb=156 \
     persist.sys.language=zh \
@@ -129,7 +127,8 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ril.subscription.types=RUIM,NV \
     ro.cdma.voicemail.number=mine \
     ro.com.google.locationfeatures=1 \
-    keyguard.no_require_sim=false
+    keyguard.no_require_sim=false \
+
 # Perfomance tweaks
 PRODUCT_PROPERTY_OVERRIDES += \
     dalvik.vm.execution-mode=int:jit \

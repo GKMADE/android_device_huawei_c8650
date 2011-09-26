@@ -42,14 +42,10 @@ ro.config.hw_use_browser_ua=true
 ro.config.srs.equalizer=false
 ro.config.hwft_MatchNum=11
 
-ro.telephony.default_network=4
 ro.config.hwft_simrefresh=true
-ro.poweroff_alarm=true
-debug.sf.hw=0
 ro.config.hw_voicerecord=true
 ro.config.hw_GSensorOptimize=true
 ro.config.hw_popupsaveoropen=true
-ro.opengles.version=131072
 ro.config.hw_proximity=true
 ro.confg.hw_appsbootversion=C8650V100R001C92B835SP01_APPSBOOT
 ro.confg.hw_appversion=C8650V100R001C92B835SP01_KERNEL
