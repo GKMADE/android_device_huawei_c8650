@@ -99,8 +99,6 @@ PRODUCT_PROPERTY_OVERRIDES := \
 
 
 PRODUCT_PROPERTY_OVERRIDES += \
-    ro.cdma.home.operator.numeric=46003 \
-    ro.telephony.default_network=4 \
     ro.config.hwft_simrefresh=true \
     ro.config.do_sdcard_upgrade=true \
     ro.config.keyguardPlmnLocaled=true \
@@ -119,12 +117,13 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.opengles.version=131072 \
     ro.config.hw_proximity=true \
     dalvik.vm.heapsize=32m \ 
-    ril.subscription.types=RUIM,NV \
     ro.config.hw_opta=92 \
     ro.config.hw_optb=156 \
     persist.sys.language=zh \
     persist.sys.country=CN \
     persist.sys.timezone=Asia/Shanghai \
+    ro.cdma.home.operator.numeric=46003 \
+    ro.telephony.default_network=4 \
     ro.cdma.home.operator.alpha=中国电信 \
     ro.config.cdma_subscription=0 \
     ril.subscription.types=RUIM,NV \
