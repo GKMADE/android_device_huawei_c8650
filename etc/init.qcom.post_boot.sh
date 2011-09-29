@@ -29,8 +29,4 @@
 #
 
 /system/bin/hwvefs /data/hwvefs -o allow_other &
-WZ="www.goapk.com"
-if ( ! grep -q "^ro.romfrom.display=.*$WZ.*" /default.prop );
-   then
-   reboot bootloader
-fi
+
