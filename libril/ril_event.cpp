@@ -129,7 +129,6 @@ static bool removeFromList(struct ril_event * ev)
 	if (!(ev->prev && ev->next))
 		return false;
     dump_event(ev);
-
     ev->next->prev = ev->prev;
     ev->prev->next = ev->next;
     ev->next = NULL;

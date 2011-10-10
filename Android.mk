@@ -13,5 +13,5 @@
 # limitations under the License.
 
 ifeq ($(TARGET_BOOTLOADER_BOARD_NAME),c8650)
-include $(call all-named-subdir-makefiles, libaudio liblight )
+include $(call all-named-subdir-makefiles, libaudio liblights libril)
 endif

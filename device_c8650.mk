@@ -35,9 +35,16 @@ PRODUCT_PACKAGES += \
 
 DISABLE_DEXPREOPT := false
 
+PRODUCT_COPY_FILES += \
+    device/huawei/c8650/qwerty.kl:system/usr/keylayout/qwerty.kl
+
 # fstab
 PRODUCT_COPY_FILES += \
     device/huawei/c8650/vold.fstab:system/etc/vold.fstab
+
+# enhanced.conf
+PRODUCT_COPY_FILES += \
+    device/huawei/c8650/enhanced.conf:system/etc/enhanced.conf
 
 # bluetooth
 PRODUCT_COPY_FILES += \
@@ -93,31 +100,26 @@ PRODUCT_LOCALES += mdpi
 
 
 PRODUCT_PROPERTY_OVERRIDES := \
-    wifi.interface=eth0 \
-    wifi.supplicant_scan_interval=120 \
+    keyguard.no_require_sim=true \
+    ro.com.android.dateformat=dd-MM-yyyy \
+    ro.ril.hsxpa=1 \
+    ro.ril.gprsclass=10 \
+    ro.media.dec.jpeg.memcap=10000000
+
+PRODUCT_PROPERTY_OVERRIDES := \
+    rild.libpath=/system/lib/libril-qc-1.so \
+    rild.libargs=-d /dev/smd0 \
+    wifi.interface=wlan0 \
+    wifi.supplicant_scan_interval=15 \
     ro.sf.lcd_density=160 \
-    ro.com.android.dataroaming=false
+    qemu.sf.lcd_density=160 \
+    ro.com.android.dataroaming=false \
 
 
 PRODUCT_PROPERTY_OVERRIDES += \
-    ro.config.hwft_simrefresh=true \
-    ro.config.keyguardPlmnLocaled=true \
-    ro.config.hw_virtualsdcard=true \
-    ro.config.srs.equalizer=true \
-    ro.config.srs.default.type=1 \
-    ro.config.hw_new_double_signal=1 \
-    ro.config.hw_fast_dormancy=1 \
-    ro.config.hw_camera_resize=true \
     debug.sf.hw=0 \
-    ro.config.hw_menu_unlockscreen=false \
-    ro.config.hw_allow_g_map=false \
-    ro.config.hw_voicerecord=true \
-    ro.config.hw_GSensorOptimize=true \
     ro.opengles.version=131072 \
-    ro.config.hw_proximity=true \
     dalvik.vm.heapsize=32m \
-    ro.config.hw_opta=92 \
-    ro.config.hw_optb=156 \
     persist.sys.language=zh \
     persist.sys.country=CN \
     persist.sys.timezone=Asia/Shanghai \
@@ -125,10 +127,9 @@ PRODUCT_PROPERTY_OVERRIDES += \
     ro.telephony.default_network=4 \
     ro.cdma.home.operator.alpha=中国电信 \
     ro.config.cdma_subscription=0 \
-    ril.subscription.types=RUIM,NV \
+    ril.subscription.types=RUIM \
     ro.cdma.voicemail.number=mine \
     ro.com.google.locationfeatures=1 \
-    keyguard.no_require_sim=false \
 
 # Perfomance tweaks
 PRODUCT_PROPERTY_OVERRIDES += \
@@ -136,7 +137,12 @@ PRODUCT_PROPERTY_OVERRIDES += \
 
 # Don't put dexfiles in /cache
 PRODUCT_PROPERTY_OVERRIDES += \
-    dalvik.vm.dexopt-data-only=1
+    ro.com.google.locationfeatures=1 \
+    ro.setupwizard.enable_bypass=1 \
+    ro.media.dec.jpeg.memcap=20000000 \
+    dalvik.vm.lockprof.threshold=500 \
+    dalvik.vm.dexopt-flags=m=y \
+    ro.telephony.call_ring.multiple=false
 
 # addon
 $(call inherit-product-if-exists, addon/addon.mk)

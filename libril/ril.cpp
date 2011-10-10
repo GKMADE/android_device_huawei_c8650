@@ -19,7 +19,7 @@
 
 #include <hardware_legacy/power.h>
 
-#include <telephony/ril.h>
+#include "ril.h"
 #include <telephony/ril_cdma_sms.h>
 #include <cutils/sockets.h>
 #include <cutils/jstring.h>
@@ -87,7 +87,7 @@ namespace android {
 #define PRINTBUF_SIZE 8096
 
 // Enable RILC log
-#define RILC_LOG 0
+#define RILC_LOG 1
 
 #if RILC_LOG
     #define startRequest           sprintf(printBuf, "(")
@@ -190,6 +190,9 @@ static size_t s_lastNITZTimeDataSize;
 #if RILC_LOG
     static char printBuf[PRINTBUF_SIZE];
 #endif
+
+static int registration_state=0;
+static int registration_denied_count=0;
 
 /*******************************************************************/
 
@@ -491,7 +494,14 @@ dispatchInts (Parcel &p, RequestInfo *pRI) {
         int32_t t;
 
         status = p.readInt32(&t);
-        pInts[i] = (int)t;
+        /* libril-qc apparently only supports SERVICE_NONE here */
+        if (pRI->pCI->requestNumber == RIL_REQUEST_QUERY_CALL_WAITING)
+            pInts[i] = 0;
+        else if (pRI->pCI->requestNumber == RIL_REQUEST_SET_CALL_WAITING &&
+                    i == 1)
+            pInts[i] = 0;
+        else
+            pInts[i] = (int)t;
         appendPrintBuf("%s%d,", printBuf, t);
 
         if (status != NO_ERROR) {
@@ -554,6 +564,12 @@ dispatchSmsWrite (Parcel &p, RequestInfo *pRI) {
 #endif
 
     free (args.pdu);
+
+#ifdef MEMSET_FREED
+    memsetString (args.smsc);
+#endif
+
+    free (args.smsc);
 
 #ifdef MEMSET_FREED
     memset(&args, 0, sizeof(args));
@@ -1826,7 +1842,7 @@ static int responseRilSignalStrength(Parcel &p,
         return RIL_ERRNO_INVALID_RESPONSE;
     }
 
-    if (responselen == sizeof (RIL_SignalStrength)) {
+//    if (responselen == sizeof (RIL_SignalStrength)) {
         // New RIL
         RIL_SignalStrength *p_cur = ((RIL_SignalStrength *) response);
 
@@ -1854,34 +1870,53 @@ static int responseRilSignalStrength(Parcel &p,
 
         closeResponse;
 
-    } else if (responselen % sizeof (int) == 0) {
+/*    } else if (responselen % sizeof (int) == 0) {
         // Old RIL deprecated
         int *p_cur = (int *) response;
-
         startResponse;
 
         // With the Old RIL we see one or 2 integers.
         size_t num = responselen / sizeof (int); // Number of integers from ril
-        size_t totalIntegers = 7; // Number of integers in RIL_SignalStrength
+        size_t totalIntegers = 4; // Number of integers in RIL_SignalStrength
         size_t i;
 
-        appendPrintBuf("%s[", printBuf);
-        for (i = 0; i < num; i++) {
-            appendPrintBuf("%s %d", printBuf, *p_cur);
-            p.writeInt32(*p_cur++);
-        }
+        appendPrintBuf("%s[NOW：", printBuf);
+        appendPrintBuf("%s %d", printBuf, p_cur[0]);
+        appendPrintBuf("%s %d", printBuf, p_cur[1]);
+        appendPrintBuf("%s %d", printBuf, p_cur[5]);
+        appendPrintBuf("%s %d", printBuf, p_cur[4]);
+        appendPrintBuf("%s %d", printBuf, p_cur[3]);
+        appendPrintBuf("%s %d", printBuf, p_cur[2]);
+        appendPrintBuf("%s %d", printBuf, p_cur[6]);
         appendPrintBuf("%s]", printBuf);
 
+        appendPrintBuf("%s[RIGHT：", printBuf);
+        appendPrintBuf("%s %d", printBuf, p_cur[0]);
+        appendPrintBuf("%s %d", printBuf, p_cur[1]);
+        appendPrintBuf("%s %d", printBuf, p_cur[2]);
+        appendPrintBuf("%s %d", printBuf, p_cur[3]);
+        appendPrintBuf("%s %d", printBuf, p_cur[4]);
+        appendPrintBuf("%s %d", printBuf, p_cur[5]);
+        appendPrintBuf("%s %d", printBuf, p_cur[6]);
+        appendPrintBuf("%s]", printBuf);
+            p.writeInt32(p_cur[0]);
+            p.writeInt32(p_cur[1]);
+            p.writeInt32(p_cur[5]);
+            p.writeInt32(p_cur[4]);
+            p.writeInt32(p_cur[3]);
+            p.writeInt32(p_cur[2]);
+            p.writeInt32(p_cur[6]);
+
         // Fill the remainder with zero's.
-        for (; i < totalIntegers; i++) {
-            p.writeInt32(0);
-        }
+        //for (i=0; i < totalIntegers; i++) {
+        //    p.writeInt32(0);
+        //}
 
         closeResponse;
     } else {
         LOGE("invalid response length");
         return RIL_ERRNO_INVALID_RESPONSE;
-    }
+    }*/
 
     return 0;
 }
@@ -2001,6 +2036,15 @@ static int responseSimStatus(Parcel &p, void *response, size_t responselen) {
 
     startResponse;
     for (i = 0; i < p_cur->num_applications; i++) {
+	if(p_cur->applications[i].app_state==RIL_APPSTATE_ILLEGAL) {
+            // if this happens, the radio is in a bad way
+            int data;
+            LOGI("SIM_APPSTATE_ILLEGAL: Power off Radio and restart rild");
+            data = 0;
+            issueLocalRequest(RIL_REQUEST_RADIO_POWER, &data, sizeof(int));
+            sleep(1);
+            exit(1);
+	}
         p.writeInt32(p_cur->applications[i].app_type);
         p.writeInt32(p_cur->applications[i].app_state);
         p.writeInt32(p_cur->applications[i].perso_substate);
@@ -2555,11 +2599,14 @@ RIL_register (const RIL_RadioFunctions *callbacks) {
     int ret;
     int flags;
 
+    registration_state=0;
+    registration_denied_count=0;
+
     if (callbacks == NULL || ((callbacks->version != RIL_VERSION)
                 && (callbacks->version != 2))) { // Remove when partners upgrade to version 3
         LOGE(
             "RIL_register: RIL_RadioFunctions * null or invalid version"
-            " (expected %d)", RIL_VERSION);
+            " (expected %d, was %d)", RIL_VERSION, callbacks->version);
         return;
     }
     if (callbacks->version < 3) {
@@ -2716,6 +2763,28 @@ RIL_onRequestComplete(RIL_Token t, RIL_Errno e, void *response, size_t responsel
         p.writeInt32 (e);
 
         if (response != NULL) {
+            if(pRI->pCI->requestNumber==RIL_REQUEST_REGISTRATION_STATE) {
+                char **resp=(char **)response;
+                registration_state=atoi(resp[0]);
+                LOGI("Registration state is %d",registration_state);
+                if(registration_state==3) // registration denied
+                    registration_denied_count++;
+                else
+                    registration_denied_count=0;
+                // If we get 8 denied registrations in a row, reset the radio
+                // by powering it off and on again.
+                // This should fix a rare problem where the radio loses service.
+                if(registration_denied_count==8) {
+                    LOGI("Registration denied 8 times, Reset Radio.........");
+                    int data = 0;
+                    issueLocalRequest(RIL_REQUEST_RADIO_POWER, &data, sizeof(int));
+                    sleep(1);
+                    data = 1;
+                    issueLocalRequest(RIL_REQUEST_RADIO_POWER, &data, sizeof(int));
+                    registration_denied_count=0;
+               }
+            }
+
             // there is a response payload, no matter success or not.
             ret = pRI->pCI->responseFunction(p, response, responselen);
 
