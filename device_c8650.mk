@@ -26,11 +26,12 @@ PRODUCT_PACKAGES += \
     Gallery3d \
     SpareParts \
     Term \
-    libcamera \
     libOmxCore \
     libOmxVidEnc \
     dexpreopt \
     gps.c8650 \
+    lights.c8650 \
+    FM \
 
 DISABLE_DEXPREOPT := false
 
