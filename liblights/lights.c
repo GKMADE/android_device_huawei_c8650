@@ -1,7 +1,5 @@
 /*
  * Copyright (C) 2008 The Android Open Source Project
- * Copyright (C) 2011 Diogo Ferreira <defer@cyanogenmod.com>
- * Copyright (C) 2011 The CyanogenMod Project <http://www.cyanogenmod.com>
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,12 +39,16 @@ static struct light_state_t g_notification;
 static struct light_state_t g_battery;
 
 static int g_backlight = 255;
+static int g_buttons = 0;
 
 /* The leds we have */
 enum {
 	LED_RED,
 	LED_GREEN,
 	LED_BLUE,
+   LED_YELLOW,
+   LED_CYAN,
+   LED_MAGENTA,
 	LED_BLANK
 };
 
@@ -128,14 +130,10 @@ static int set_light_buttons (struct light_device_t *dev, struct light_state_t c
 	int err = 0;
 	int on = is_lit(state);
 	pthread_mutex_lock(&g_lock);
-
-	for (i = 0; i < sizeof(BUTTON_BACKLIGHT_FILE)/sizeof(BUTTON_BACKLIGHT_FILE[0]); i++) {
-		err = write_int (BUTTON_BACKLIGHT_FILE[i],on?1:0);
-	}
-
+   g_buttons = on;
+   err = write_int(BUTTON_BACKLIGHT_FILE, on?255:0);
 	pthread_mutex_unlock(&g_lock);
-
-	return 0;
+   return err;
 }
 
 static void set_shared_light_locked (struct light_device_t *dev, struct light_state_t *state) {
@@ -244,6 +242,6 @@ const struct hw_module_t HAL_MODULE_INFO_SYM = {
 	.version_minor = 0,
 	.id = LIGHTS_HARDWARE_MODULE_ID,
 	.name = "C8650 lights module",
-	.author = "Diogo Ferreira <defer@cyanogenmod.com>",
+	.author = "genokolar <genokolar@gmail.com>",
 	.methods = &lights_module_methods,
 };
