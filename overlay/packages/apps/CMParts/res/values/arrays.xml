@@ -22,6 +22,9 @@
         <item>@string/trackball_color_entry_green</item>
         <item>@string/trackball_color_entry_blue</item>
         <item>@string/trackball_color_entry_red</item>
+        <item>@string/trackball_color_entry_yellow</item>
+        <item>@string/trackball_color_entry_cyan</item>
+        <item>@string/trackball_color_entry_magenta</item>
     </string-array>
 
     <string-array name="values_dual_led_colors" translatable="false">
@@ -29,6 +32,9 @@
         <item>green</item>
         <item>blue</item>
         <item>red</item>
+        <item>yellow</item>
+        <item>cyan</item>
+        <item>magenta</item>
     </string-array>
 
 </resources>
